@@ -45,6 +45,11 @@ class Plugin {
 	public function run() {
 		$this->load_textdomain();
 
+		// Auto-update DB schema if version changes
+		if ( get_option( 'avs_db_version' ) !== \AIVisibilityScanner\DB\Schema::DB_VERSION ) {
+			\AIVisibilityScanner\DB\Schema::create_tables();
+		}
+
 		if ( is_admin() ) {
 			$admin_menu   = new Admin_Menu();
 			$admin_assets = new Admin_Assets();

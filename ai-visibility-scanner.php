@@ -25,6 +25,14 @@ define( 'AVS_FILE', __FILE__ );
 define( 'AVS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'AVS_URL', plugin_dir_url( __FILE__ ) );
 
+// Check minimum PHP requirement
+if ( version_compare( PHP_VERSION, '7.4', '<' ) ) {
+	add_action( 'admin_notices', function() {
+		echo '<div class="notice notice-error"><p>' . esc_html__( 'AI Visibility Scanner requires PHP 7.4 or higher.', 'ai-visibility-scanner' ) . '</p></div>';
+	} );
+	return;
+}
+
 /**
  * Autoloader for AIVisibilityScanner namespace (PSR-4 compliant).
  * Ensures compatibility across basic shared hosting without requiring CLI/Composer at runtime.

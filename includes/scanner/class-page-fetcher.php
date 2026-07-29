@@ -152,6 +152,25 @@ class Page_Fetcher {
 		);
 
 		$response   = wp_remote_get( $url, $args );
+
+		// If loopback to public URL fails (common in Docker/Local dev where host port like 8080 is mapped externally, but internal webserver listens on port 80), fallback to 127.0.0.1 with Host header per Spec §11.1
+		if ( is_wp_error( $response ) ) {
+			$parsed = parse_url( $url );
+			if ( ! empty( $parsed['host'] ) ) {
+				$host_header   = $parsed['host'] . ( ! empty( $parsed['port'] ) ? ':' . $parsed['port'] : '' );
+				$internal_path = ( ! empty( $parsed['path'] ) ? $parsed['path'] : '/' ) . ( ! empty( $parsed['query'] ) ? '?' . $parsed['query'] : '' );
+				$internal_url  = 'http://127.0.0.1' . $internal_path;
+
+				$args_internal = $args;
+				$args_internal['headers']['Host'] = $host_header;
+
+				$response_alt = wp_remote_get( $internal_url, $args_internal );
+				if ( ! is_wp_error( $response_alt ) ) {
+					$response = $response_alt;
+				}
+			}
+		}
+
 		$elapsed_ms = (int) round( ( microtime( true ) - $start_time ) * 1000 );
 
 		if ( is_wp_error( $response ) ) {
