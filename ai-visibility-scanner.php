@@ -55,6 +55,9 @@ spl_autoload_register( function ( $class ) {
 	$parts      = explode( '/', $file_path );
 	$class_name = array_pop( $parts );
 
+	// Convert parent directory names to lowercase for case-sensitive filesystems (Linux)
+	$parts      = array_map( 'strtolower', $parts );
+
 	// Convert ClassName to class-classname.php or interface-interfacename.php
 	$slug       = strtolower( str_replace( '_', '-', $class_name ) );
 	$is_interface = strpos( $class_name, 'Interface' ) !== false;

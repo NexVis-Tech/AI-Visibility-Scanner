@@ -9,6 +9,7 @@ use AIVisibilityScanner\Admin\Admin_Menu;
 use AIVisibilityScanner\Admin\Admin_Assets;
 use AIVisibilityScanner\API\Rest_API;
 use AIVisibilityScanner\Scanner\Scan_Job;
+use AIVisibilityScanner\DB\Schema;
 
 /**
  * Core Plugin Singleton Class.
