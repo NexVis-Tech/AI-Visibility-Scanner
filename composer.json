@@ -1,0 +1,27 @@
+{
+  "name": "nexvis/ai-visibility-scanner",
+  "description": "AI Visibility Scanner WordPress Plugin - Audit, score, and optimize your WP site for AI Search & LLMs.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "NexVis Technologies",
+      "email": "contact@nexvistech.com",
+      "homepage": "https://nexvistech.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.4",
+    "woocommerce/action-scheduler": "^3.7"
+  },
+  "autoload": {
+    "psr-4": {
+      "AIVisibilityScanner\\": "includes/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true,
+    "allow-plugins": {}
+  }
+}

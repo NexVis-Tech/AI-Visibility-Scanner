@@ -1,0 +1,36 @@
+# Composer / Dependencies
+/vendor/
+/node_modules/
+composer.lock
+
+# Operating System & IDE Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# WordPress & Local Dev / Docker
+/docker/mysql_data/
+/docker/wordpress/
+*.log
+*.sql
+*.sqlite
+.env
+.env.local
+
+# Build & Temporary Files
+/scratch/
+/tmp/
+/dist/
+/build/
+*.zip
+*.tar.gz

@@ -1,0 +1,76 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: avs_wordpress_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password123
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress_pass
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - wp_net
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -proot_password123 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  wordpress:
+    image: wordpress:latest
+    container_name: avs_wordpress_app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress_pass
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_DEBUG', true );
+        define( 'WP_DEBUG_LOG', true );
+        define( 'WP_DEBUG_DISPLAY', false );
+        define( 'SCRIPT_DEBUG', true );
+    volumes:
+      - wp_data:/var/www/html
+      - ./:/var/www/html/wp-content/plugins/ai-visibility-scanner
+      - ../mirror-readiness-scanner:/var/www/html/wp-content/plugins/mirror-readiness-scanner
+      - ./docker/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    networks:
+      - wp_net
+
+  wpcli:
+    image: wordpress:cli
+    container_name: avs_wordpress_cli
+    user: root
+    environment:
+      WP_CLI_ALLOW_ROOT: 1
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress_pass
+      WORDPRESS_DB_NAME: wordpress
+    depends_on:
+      - wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ./:/var/www/html/wp-content/plugins/ai-visibility-scanner
+      - ../mirror-readiness-scanner:/var/www/html/wp-content/plugins/mirror-readiness-scanner
+      - ./docker/setup.sh:/setup.sh
+    networks:
+      - wp_net
+    entrypoint: ["/bin/sh", "-c", "tr -d '\\r' < /setup.sh > /tmp/setup.sh && chmod +x /tmp/setup.sh && /tmp/setup.sh \"$@\"", "--"]
+
+volumes:
+  db_data:
+  wp_data:
+
+networks:
+  wp_net:
+    driver: bridge
