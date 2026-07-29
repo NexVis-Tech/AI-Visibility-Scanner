@@ -27,6 +27,13 @@ class Orchestrator {
 		global $wpdb;
 		$table_scans = $wpdb->prefix . 'avs_scans';
 
+		// Auto-heal check: If table missing, attempt creation on-the-fly
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_scans ) ) !== $table_scans ) {
+			if ( class_exists( '\\AIVisibilityScanner\\DB\\Schema' ) ) {
+				\AIVisibilityScanner\DB\Schema::create_tables();
+			}
+		}
+
 		$crawler = new Crawler();
 		$urls    = $crawler->get_urls_to_scan();
 
@@ -41,7 +48,15 @@ class Orchestrator {
 		$inserted = $wpdb->insert( $table_scans, $data, array( '%s', '%s', '%d', '%d', '%s' ) );
 
 		if ( ! $inserted ) {
-			return new \WP_Error( 'avs_scan_failed', __( 'Could not initialize scan in database.', 'ai-visibility-scanner' ) );
+			$db_err = ! empty( $wpdb->last_error ) ? $wpdb->last_error : __( 'Database table missing or MySQL user lacks INSERT privileges.', 'ai-visibility-scanner' );
+			return new \WP_Error(
+				'avs_scan_failed',
+				sprintf(
+					/* translators: %s: Database error string */
+					__( 'Could not initialize scan in database (%s). Developer Tip: Please check your MySQL table permissions or navigate to AI Visibility > Diagnostics to run system health checks.', 'ai-visibility-scanner' ),
+					$db_err
+				)
+			);
 		}
 
 		$scan_id = $wpdb->insert_id;

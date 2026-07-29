@@ -20,6 +20,7 @@ class Self_Test_Runner {
 		$fetcher  = new Page_Fetcher( null );
 
 		$results = array(
+			'database'   => $this->test_database_tables(),
 			'loopback'   => $this->test_loopback( $fetcher, $site_url ),
 			'robots'     => $this->test_robots_txt( $fetcher, $site_url ),
 			'sitemap'    => $this->test_sitemap( $fetcher, $site_url ),
@@ -136,6 +137,48 @@ class Self_Test_Runner {
 			'summary'       => $detected ? sprintf( __( 'Cloudflare Detected (Ray ID: %s, Cache: %s)', 'ai-visibility-scanner' ), esc_html( $cf_ray ? $cf_ray : 'Yes' ), esc_html( $cf_cache ? $cf_cache : 'N/A' ) ) : __( 'Cloudflare proxy headers not detected on loopback', 'ai-visibility-scanner' ),
 			'detected'      => $detected,
 			'diagnostic_id' => $res['diagnostic_id'],
+		);
+	}
+
+	/**
+	 * Test 5: Database schema & tables check.
+	 */
+	private function test_database_tables(): array {
+		global $wpdb;
+
+		$expected_tables = array(
+			$wpdb->prefix . 'avs_scans',
+			$wpdb->prefix . 'avs_check_results',
+			$wpdb->prefix . 'avs_scan_diagnostics',
+			$wpdb->prefix . 'avs_scan_environment',
+		);
+
+		$missing = array();
+		foreach ( $expected_tables as $table ) {
+			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+				$missing[] = $table;
+			}
+		}
+
+		if ( ! empty( $missing ) && class_exists( '\\AIVisibilityScanner\\DB\\Schema' ) ) {
+			\AIVisibilityScanner\DB\Schema::create_tables();
+
+			// Re-check after attempting auto-heal creation
+			$still_missing = array();
+			foreach ( $missing as $table ) {
+				if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+					$still_missing[] = $table;
+				}
+			}
+			$missing = $still_missing;
+		}
+
+		$is_pass = empty( $missing );
+
+		return array(
+			'name'    => __( 'Database Tables Health', 'ai-visibility-scanner' ),
+			'status'  => $is_pass ? 'pass' : 'fail',
+			'summary' => $is_pass ? __( 'All 4 plugin database tables present and active.', 'ai-visibility-scanner' ) : sprintf( __( 'Missing database tables: %s. Please check MySQL user permissions.', 'ai-visibility-scanner' ), implode( ', ', $missing ) ),
 		);
 	}
 }
