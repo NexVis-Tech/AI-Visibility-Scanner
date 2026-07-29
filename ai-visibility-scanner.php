@@ -77,7 +77,14 @@ if ( file_exists( AVS_PATH . 'vendor/autoload.php' ) ) {
  * Main plugin activation handler.
  */
 function activate_ai_visibility_scanner() {
-	require_once AVS_PATH . 'includes/class-activator.php';
+	if ( defined( 'AVS_PATH' ) ) {
+		if ( file_exists( AVS_PATH . 'includes/db/class-schema.php' ) ) {
+			require_once AVS_PATH . 'includes/db/class-schema.php';
+		}
+		if ( file_exists( AVS_PATH . 'includes/class-activator.php' ) ) {
+			require_once AVS_PATH . 'includes/class-activator.php';
+		}
+	}
 	\AIVisibilityScanner\Activator::activate();
 }
 
