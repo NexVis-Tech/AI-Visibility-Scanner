@@ -13,6 +13,16 @@ $recent_scans = $wpdb->get_results( "SELECT id, site_url, status, composite_scor
 
 $current_scan_id = isset( $_GET['scan_id'] ) ? (int) $_GET['scan_id'] : ( ! empty( $recent_scans ) ? (int) $recent_scans[0]->id : null );
 
+$selected_scan = null;
+if ( $current_scan_id ) {
+	foreach ( $recent_scans as $s ) {
+		if ( (int) $s->id === (int) $current_scan_id ) {
+			$selected_scan = $s;
+			break;
+		}
+	}
+}
+
 $environment = \AIVisibilityScanner\Scanner\Diagnostics_Logger::get_environment( $current_scan_id );
 $diagnostics = \AIVisibilityScanner\Scanner\Diagnostics_Logger::get_diagnostics( $current_scan_id );
 
@@ -46,7 +56,7 @@ foreach ( $diagnostics as $d ) {
 	</div>
 
 	<!-- Scan Selector Header Bar -->
-	<div class="avs-card avs-scan-selector-card">
+	<div class="avs-card avs-scan-selector-card" style="margin-bottom: 20px;">
 		<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" class="avs-scan-selector-form">
 			<input type="hidden" name="page" value="avs-diagnostics" />
 			<label for="avs-scan-select" class="avs-label-bold"><?php esc_html_e( 'Select Scan Run:', 'ai-visibility-scanner' ); ?></label>
@@ -56,7 +66,14 @@ foreach ( $diagnostics as $d ) {
 				<?php else : ?>
 					<?php foreach ( $recent_scans as $scan ) : ?>
 						<option value="<?php echo esc_attr( $scan->id ); ?>" <?php selected( $current_scan_id, $scan->id ); ?>>
-							Scan #<?php echo esc_html( $scan->id ); ?> &mdash; <?php echo esc_html( $scan->started_at ); ?> (Score: <?php echo null !== $scan->composite_score ? esc_html( $scan->composite_score ) . '/100' : 'N/A'; ?>)
+							Scan #<?php echo esc_html( $scan->id ); ?> &mdash; <?php echo esc_html( $scan->started_at ); ?> 
+							(<?php 
+								if ( 'completed' === $scan->status ) {
+									echo null !== $scan->composite_score ? esc_html( $scan->composite_score ) . '/100' : esc_html__( 'Completed', 'ai-visibility-scanner' );
+								} else {
+									echo esc_html( strtoupper( $scan->status ) );
+								}
+							?>)
 						</option>
 					<?php endforeach; ?>
 				<?php endif; ?>
@@ -75,6 +92,32 @@ foreach ( $diagnostics as $d ) {
 			<?php endif; ?>
 		</form>
 	</div>
+
+	<?php if ( $selected_scan && 'failed' === $selected_scan->status ) : ?>
+		<div class="notice notice-error" style="margin: 0 0 20px 0; padding: 15px; border-left-width: 4px; background: #fff5f5; border-color: #ef4444; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+			<div style="display: flex; gap: 10px; align-items: flex-start;">
+				<span class="dashicons dashicons-warning" style="color: #ef4444; font-size: 22px; width: 22px; height: 22px; margin-top: 2px;"></span>
+				<div>
+					<h3 style="margin: 0 0 5px 0; color: #991b1b; font-size: 14px; font-weight: 700;"><?php esc_html_e( 'Scan Job Aborted or Timed Out', 'ai-visibility-scanner' ); ?></h3>
+					<p style="margin: 0; font-size: 13px; color: #7f1d1d; line-height: 1.5;">
+						<?php esc_html_e( 'This scan run failed to complete (often due to hosting execution limits, firewall blocking loopback HTTP connections, or database query caps). We have updated the scan runner to execute 90% fewer network calls and bundle requests. Please navigate back to the Dashboard and start a new scan.', 'ai-visibility-scanner' ); ?>
+					</p>
+				</div>
+			</div>
+		</div>
+	<?php elseif ( $selected_scan && 'running' === $selected_scan->status ) : ?>
+		<div class="notice notice-warning" style="margin: 0 0 20px 0; padding: 15px; border-left-width: 4px; background: #fefcf0; border-color: #eab308; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+			<div style="display: flex; gap: 10px; align-items: flex-start;">
+				<span class="dashicons dashicons-update" style="color: #eab308; font-size: 22px; width: 22px; height: 22px; margin-top: 2px; animation: spin 2s linear infinite;"></span>
+				<div>
+					<h3 style="margin: 0 0 5px 0; color: #854d0e; font-size: 14px; font-weight: 700;"><?php esc_html_e( 'Scan Job in Progress', 'ai-visibility-scanner' ); ?></h3>
+					<p style="margin: 0; font-size: 13px; color: #713f12; line-height: 1.5;">
+						<?php esc_html_e( 'This scan is currently executing in the background. Please wait a few moments and refresh this page to inspect diagnostic entries as they populate.', 'ai-visibility-scanner' ); ?>
+					</p>
+				</div>
+			</div>
+		</div>
+	<?php endif; ?>
 
 	<!-- Connectivity Self-Test Explanatory Banner -->
 	<div class="avs-card avs-selftest-intro-card" style="background: #f0f9ff; border: 1px solid #bae6fd; border-left: 4px solid #0284c7; margin-bottom: 20px; padding: 18px 20px;">

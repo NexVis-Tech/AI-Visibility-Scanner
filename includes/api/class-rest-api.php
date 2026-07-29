@@ -186,6 +186,22 @@ class Rest_API extends WP_REST_Controller {
 			return new WP_Error( 'avs_scan_not_found', __( 'Scan not found', 'ai-visibility-scanner' ), array( 'status' => 404 ) );
 		}
 
+		// Auto-fail stale/crashed scans running for more than 5 minutes
+		if ( in_array( $scan->status, array( 'queued', 'running' ), true ) ) {
+			$started_time = strtotime( $scan->started_at );
+			$current_time = current_time( 'timestamp' );
+			if ( $started_time && ( $current_time - $started_time ) > 300 ) { // 5 minutes
+				$wpdb->update(
+					$table_name,
+					array( 'status' => 'failed' ),
+					array( 'id' => $scan_id ),
+					array( '%s' ),
+					array( '%d' )
+				);
+				$scan->status = 'failed';
+			}
+		}
+
 		$progress = $scan->pages_total > 0 ? round( ( $scan->pages_scanned / $scan->pages_total ) * 100 ) : 0;
 
 		return new WP_REST_Response(
