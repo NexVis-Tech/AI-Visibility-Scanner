@@ -11,11 +11,15 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 global $wpdb;
 
 // Drop custom database tables
-$table_scans   = $wpdb->prefix . 'avs_scans';
-$table_results = $wpdb->prefix . 'avs_check_results';
+$table_scans       = $wpdb->prefix . 'avs_scans';
+$table_results     = $wpdb->prefix . 'avs_check_results';
+$table_diagnostics = $wpdb->prefix . 'avs_scan_diagnostics';
+$table_environment = $wpdb->prefix . 'avs_scan_environment';
 
 $wpdb->query( "DROP TABLE IF EXISTS {$table_results}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 $wpdb->query( "DROP TABLE IF EXISTS {$table_scans}" );   // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+$wpdb->query( "DROP TABLE IF EXISTS {$table_diagnostics}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+$wpdb->query( "DROP TABLE IF EXISTS {$table_environment}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 // Delete plugin options
 delete_option( 'avs_settings' );
