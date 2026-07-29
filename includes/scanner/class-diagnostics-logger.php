@@ -159,10 +159,23 @@ class Diagnostics_Logger {
 		$table = $wpdb->prefix . 'avs_scan_environment';
 
 		if ( $scan_id ) {
-			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE scan_id = %d", $scan_id ) );
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE scan_id = %d", $scan_id ) );
+			if ( $row ) {
+				return $row;
+			}
 		}
 
-		return $wpdb->get_row( "SELECT * FROM {$table} ORDER BY id DESC LIMIT 1" );
+		$latest = $wpdb->get_row( "SELECT * FROM {$table} ORDER BY id DESC LIMIT 1" );
+		if ( $latest ) {
+			return $latest;
+		}
+
+		// Auto-collect on the fly if table has no records yet
+		$env_data = Environment_Collector::collect();
+		if ( $scan_id ) {
+			self::log_environment( (int) $scan_id, $env_data );
+		}
+		return (object) $env_data;
 	}
 
 	/**

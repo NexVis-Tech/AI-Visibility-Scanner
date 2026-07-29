@@ -76,6 +76,26 @@ foreach ( $diagnostics as $d ) {
 		</form>
 	</div>
 
+	<!-- Connectivity Self-Test Explanatory Banner -->
+	<div class="avs-card avs-selftest-intro-card" style="background: #f0f9ff; border: 1px solid #bae6fd; border-left: 4px solid #0284c7; margin-bottom: 20px; padding: 18px 20px;">
+		<div style="display: flex; align-items: flex-start; gap: 14px;">
+			<span class="dashicons dashicons-info-outline" style="font-size: 24px; width: 24px; height: 24px; color: #0284c7; margin-top: 2px;"></span>
+			<div>
+				<h3 style="margin: 0 0 6px 0; font-size: 15px; color: #0f172a; font-weight: 700;">
+					<?php esc_html_e( 'Why Run the Connectivity Self-Test?', 'ai-visibility-scanner' ); ?>
+				</h3>
+				<p style="margin: 0 0 10px 0; font-size: 13px; color: #334155; line-height: 1.5;">
+					<?php esc_html_e( 'This quick 3-second health check verifies that your server, database, firewall, and security plugins allow the scanner to audit your site. Running it before a scan ensures background jobs run smoothly and prevents firewall blocks from skewing your scores.', 'ai-visibility-scanner' ); ?>
+				</p>
+				<div style="display: flex; gap: 20px; font-size: 12px; color: #0369a1; font-weight: 600; flex-wrap: wrap;">
+					<span>⚡ <strong>3-Second Check:</strong> Verifies server loopback, WP-Cron queue, REST API, & DB health.</span>
+					<span>🛡️ <strong>Prevents False Alarms:</strong> Confirms security plugins/WAFs won\'t block crawler requests.</span>
+					<span>🎯 <strong>Ensures Scan Completion:</strong> Guarantees background scans run without hanging.</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<!-- Standalone Connectivity Self-Test Output Area -->
 	<div id="avs-selftest-container" style="display: none;" class="avs-card avs-card-primary">
 		<div class="avs-card-header">

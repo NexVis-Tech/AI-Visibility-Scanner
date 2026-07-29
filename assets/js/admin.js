@@ -370,7 +370,10 @@
 							const statusClass = 'st-' + (test.status || 'info');
 							html += '<div class="avs-st-card ' + statusClass + '">';
 							html += '  <div class="avs-st-title"><span>' + test.name + '</span><span class="avs-pill avs-pill-' + (test.status === 'pass' ? 'success' : (test.status === 'fail' ? 'danger' : 'warn')) + '">' + test.status.toUpperCase() + '</span></div>';
-							html += '  <div class="avs-st-summary">' + test.summary + '</div>';
+							html += '  <div class="avs-st-summary"><strong>Result:</strong> ' + test.summary + '</div>';
+							if (test.why_it_matters) {
+								html += '  <div style="font-size: 11px; color: #64748b; margin-top: 5px;">💡 <em>' + test.why_it_matters + '</em></div>';
+							}
 							if (test.snippet) {
 								html += '  <pre class="avs-code-box" style="margin-top: 8px; max-height: 80px;"><code>' + test.snippet + '</code></pre>';
 							}
