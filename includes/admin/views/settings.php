@@ -4,10 +4,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( isset( $_POST['avs_save_settings'] ) && check_admin_referer( 'avs_settings_nonce' ) ) {
-	$post_types   = isset( $_POST['avs_post_types'] ) ? array_map( 'sanitize_text_field', (array) $_POST['avs_post_types'] ) : array( 'post', 'page' );
-	$max_pages    = isset( $_POST['avs_max_pages'] ) ? absint( $_POST['avs_max_pages'] ) : 30;
-	$exclude_urls = isset( $_POST['avs_exclude_urls'] ) ? sanitize_textarea_field( $_POST['avs_exclude_urls'] ) : '';
-	$enable_credit= isset( $_POST['avs_enable_credit_footer'] ) ? 1 : 0;
+	$post_types    = isset( $_POST['avs_post_types'] ) ? array_map( 'sanitize_text_field', (array) $_POST['avs_post_types'] ) : array( 'post', 'page' );
+	$max_pages     = isset( $_POST['avs_max_pages'] ) ? absint( $_POST['avs_max_pages'] ) : 30;
+	$exclude_urls  = isset( $_POST['avs_exclude_urls'] ) ? sanitize_textarea_field( $_POST['avs_exclude_urls'] ) : '';
+	$request_delay = isset( $_POST['avs_request_delay'] ) ? absint( $_POST['avs_request_delay'] ) : 500;
+	$enable_credit = isset( $_POST['avs_enable_credit_footer'] ) ? 1 : 0;
 
 	// Enforce ceiling filter limit for free build
 	$free_cap  = apply_filters( 'avs_max_pages_free', 30 );
@@ -17,6 +18,7 @@ if ( isset( $_POST['avs_save_settings'] ) && check_admin_referer( 'avs_settings_
 		'post_types'           => $post_types,
 		'max_pages'            => $max_pages,
 		'exclude_urls'         => $exclude_urls,
+		'request_delay'        => $request_delay,
 		'enable_credit_footer' => $enable_credit,
 	);
 
@@ -24,7 +26,7 @@ if ( isset( $_POST['avs_save_settings'] ) && check_admin_referer( 'avs_settings_
 	echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved successfully.', 'ai-visibility-scanner' ) . '</p></div>';
 }
 
-$settings           = get_option( 'avs_settings', array( 'post_types' => array( 'post', 'page' ), 'max_pages' => 30, 'exclude_urls' => '', 'enable_credit_footer' => 1 ) );
+$settings           = get_option( 'avs_settings', array( 'post_types' => array( 'post', 'page' ), 'max_pages' => 30, 'exclude_urls' => '', 'request_delay' => 500, 'enable_credit_footer' => 1 ) );
 $all_post_types     = get_post_types( array( 'public' => true ), 'objects' );
 ?>
 <div class="wrap avs-wrap">
@@ -60,6 +62,14 @@ $all_post_types     = get_post_types( array( 'public' => true ), 'objects' );
 				<td>
 					<textarea name="avs_exclude_urls" rows="4" cols="50" class="large-text"><?php echo esc_textarea( $settings['exclude_urls'] ); ?></textarea>
 					<p class="description"><?php esc_html_e( 'Enter exact URLs or patterns to exclude from scanning (one per line).', 'ai-visibility-scanner' ); ?></p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Request Crawl Delay', 'ai-visibility-scanner' ); ?></th>
+				<td>
+					<input type="number" name="avs_request_delay" value="<?php echo esc_attr( $settings['request_delay'] ?? 500 ); ?>" min="0" max="5000" step="50" class="small-text" /> ms
+					<p class="description"><?php esc_html_e( 'Delay (in milliseconds) between page loads to prevent triggering hosting security firewalls or WAF rate limits. Set to 0 for no delay.', 'ai-visibility-scanner' ); ?></p>
 				</td>
 			</tr>
 

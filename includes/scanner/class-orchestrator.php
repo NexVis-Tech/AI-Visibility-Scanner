@@ -91,6 +91,9 @@ class Orchestrator {
 			$site_context = $crawler->get_site_context();
 			$urls         = $crawler->get_urls_to_scan();
 
+			$settings     = get_option( 'avs_settings', array() );
+			$delay_ms     = isset( $settings['request_delay'] ) ? (int) $settings['request_delay'] : 500;
+
 			$pages_scanned = 0;
 
 			foreach ( $urls as $url ) {
@@ -119,6 +122,11 @@ class Orchestrator {
 
 				$pages_scanned++;
 				$wpdb->update( $table_scans, array( 'pages_scanned' => $pages_scanned ), array( 'id' => $scan_id ), array( '%d' ), array( '%d' ) );
+
+				// Add delay to prevent firewall rate limiting (robotic attack false-positive mitigation)
+				if ( $delay_ms > 0 && $pages_scanned < count( $urls ) ) {
+					usleep( $delay_ms * 1000 );
+				}
 			}
 
 			// Run scoring calculation
