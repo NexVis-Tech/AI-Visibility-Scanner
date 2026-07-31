@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Schema {
 
-	const DB_VERSION = '1.1.0';
+	const DB_VERSION = '1.1.1';
 
 	/**
 	 * Create or update database schema.
@@ -45,6 +45,7 @@ class Schema {
 		$sql_results = "CREATE TABLE {$table_results} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			scan_id bigint(20) unsigned NOT NULL,
+			post_id bigint(20) unsigned NULL,
 			page_url varchar(255) NOT NULL,
 			check_slug varchar(100) NOT NULL,
 			category varchar(50) NOT NULL,
@@ -55,6 +56,7 @@ class Schema {
 			impact_score tinyint(3) unsigned NOT NULL DEFAULT 1,
 			PRIMARY KEY  (id),
 			KEY scan_id  (scan_id),
+			KEY post_id  (post_id),
 			KEY category  (category),
 			KEY result  (result)
 		) {$charset_collate};";

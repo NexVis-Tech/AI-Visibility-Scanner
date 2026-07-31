@@ -89,7 +89,7 @@ $report  = Report_Builder::get_report( $scan_id );
 			<div class="avs-filter-bar">
 				<div class="avs-search-wrapper">
 					<span class="dashicons dashicons-search"></span>
-					<input type="text" id="avs-filter-search" class="avs-input-search" placeholder="<?php esc_attr_e( 'Search checks, URLs, or evidence...', 'ai-visibility-scanner' ); ?>" />
+					<input type="text" id="avs-filter-search" class="avs-input-search" placeholder="<?php esc_attr_e( 'Search checks, URLs, or evidence...', 'ai-visibility-scanner' ); ?>" value="<?php echo esc_attr( isset( $_GET['search'] ) ? sanitize_text_field( $_GET['search'] ) : '' ); ?>" />
 				</div>
 				<div class="avs-filter-group">
 					<label for="avs-filter-status"><?php esc_html_e( 'Status:', 'ai-visibility-scanner' ); ?></label>
@@ -114,18 +114,22 @@ $report  = Report_Builder::get_report( $scan_id );
 			</div>
 		</div>
 
+		<?php
+		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : ( isset( $_GET['search'] ) ? 'tab-pages' : 'tab-fixes' );
+		?>
+
 		<!-- View Tab Navigation -->
 		<div class="avs-tabs-container">
 			<ul class="avs-tabs-menu">
-				<li class="avs-tab-item active" data-tab="tab-fixes">
+				<li class="avs-tab-item <?php echo 'tab-fixes' === $active_tab ? 'active' : ''; ?>" data-tab="tab-fixes">
 					🎯 <?php esc_html_e( 'Action Plan', 'ai-visibility-scanner' ); ?>
 					<span class="avs-tab-badge avs-badge-fixes"><?php echo esc_html( count( $report['prioritized_fixes'] ) ); ?></span>
 				</li>
-				<li class="avs-tab-item" data-tab="tab-pages">
+				<li class="avs-tab-item <?php echo 'tab-pages' === $active_tab ? 'active' : ''; ?>" data-tab="tab-pages">
 					📄 <?php esc_html_e( 'Page-by-Page Audit', 'ai-visibility-scanner' ); ?>
 					<span class="avs-tab-badge"><?php echo esc_html( count( $report['pages_map'] ) ); ?></span>
 				</li>
-				<li class="avs-tab-item" data-tab="tab-all">
+				<li class="avs-tab-item <?php echo 'tab-all' === $active_tab ? 'active' : ''; ?>" data-tab="tab-all">
 					📋 <?php esc_html_e( 'All Check Results', 'ai-visibility-scanner' ); ?>
 					<span class="avs-tab-badge"><?php echo esc_html( count( $report['results'] ) ); ?></span>
 				</li>
@@ -133,7 +137,7 @@ $report  = Report_Builder::get_report( $scan_id );
 		</div>
 
 		<!-- TAB 1: Action Plan (Prioritized Fixes) -->
-		<div id="tab-fixes" class="avs-tab-content active">
+		<div id="tab-fixes" class="avs-tab-content <?php echo 'tab-fixes' === $active_tab ? 'active' : ''; ?>">
 			<div class="avs-card">
 				<div class="avs-section-header">
 					<h2>🎯 <?php esc_html_e( 'Prioritized Action Plan (High Impact First)', 'ai-visibility-scanner' ); ?></h2>
@@ -189,7 +193,7 @@ $report  = Report_Builder::get_report( $scan_id );
 		</div>
 
 		<!-- TAB 2: Page-by-Page Audit -->
-		<div id="tab-pages" class="avs-tab-content">
+		<div id="tab-pages" class="avs-tab-content <?php echo 'tab-pages' === $active_tab ? 'active' : ''; ?>">
 			<div class="avs-card">
 				<div class="avs-section-header">
 					<h2>📄 <?php esc_html_e( 'Page-by-Page Audit Breakdown', 'ai-visibility-scanner' ); ?></h2>
@@ -257,7 +261,7 @@ $report  = Report_Builder::get_report( $scan_id );
 		</div>
 
 		<!-- TAB 3: All Check Results Table (Filterable & Paginated) -->
-		<div id="tab-all" class="avs-tab-content">
+		<div id="tab-all" class="avs-tab-content <?php echo 'tab-all' === $active_tab ? 'active' : ''; ?>">
 			<div class="avs-card">
 				<div class="avs-section-header">
 					<h2>📋 <?php esc_html_e( 'Complete Check Results Log', 'ai-visibility-scanner' ); ?></h2>

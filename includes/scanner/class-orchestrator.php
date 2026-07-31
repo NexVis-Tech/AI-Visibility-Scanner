@@ -99,6 +99,8 @@ class Orchestrator {
 			foreach ( $urls as $url ) {
 				// Optimize: Fetch page HTML once per URL instead of once per check!
 				$html_body = $fetcher->fetch_in_process( $url, 'page_fetch' );
+				$post_id = url_to_postid( $url );
+				$post_id = $post_id > 0 ? $post_id : null;
 
 				foreach ( $checks as $check ) {
 					$result_obj = $check->run( $url, $html_body, $site_context );
@@ -107,6 +109,7 @@ class Orchestrator {
 						$table_results,
 						array(
 							'scan_id'      => $scan_id,
+							'post_id'      => $post_id,
 							'page_url'     => $url,
 							'check_slug'   => $result_obj->slug,
 							'category'     => $result_obj->category,
@@ -116,8 +119,57 @@ class Orchestrator {
 							'effort_score' => $result_obj->effort_score,
 							'impact_score' => $result_obj->impact_score,
 						),
-						array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
+						array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
 					);
+				}
+
+				if ( $post_id ) {
+					$scoring_engine = new Scoring_Engine();
+					$page_score_data = $scoring_engine->calculate_page_score( $scan_id, $post_id );
+
+					$page_results = $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT result, evidence, effort_score, impact_score FROM {$table_results} WHERE scan_id = %d AND post_id = %d",
+							$scan_id,
+							$post_id
+						)
+					);
+
+					$counts = array( 'fail' => 0, 'warn' => 0, 'pass' => 0 );
+					$unresolved = array();
+
+					foreach ( $page_results as $row ) {
+						$res = $row->result;
+						if ( isset( $counts[ $res ] ) ) {
+							$counts[ $res ]++;
+						}
+
+						if ( 'pass' !== $res ) {
+							$ratio = $row->effort_score > 0 ? ( $row->impact_score / $row->effort_score ) : $row->impact_score;
+							$unresolved[] = array(
+								'evidence' => $row->evidence,
+								'ratio'    => $ratio,
+							);
+						}
+					}
+
+					usort( $unresolved, function( $a, $b ) {
+						if ( $a['ratio'] === $b['ratio'] ) {
+							return 0;
+						}
+						return ( $a['ratio'] > $b['ratio'] ) ? -1 : 1;
+					} );
+
+					$top_issue = '';
+					if ( ! empty( $unresolved ) ) {
+						$top_issue = $unresolved[0]['evidence'];
+					}
+
+					update_post_meta( $post_id, '_avs_score', (int) $page_score_data['composite'] );
+					update_post_meta( $post_id, '_avs_score_scan_id', (int) $scan_id );
+					update_post_meta( $post_id, '_avs_score_updated_at', current_time( 'mysql' ) );
+					update_post_meta( $post_id, '_avs_issue_summary', wp_json_encode( $counts ) );
+					update_post_meta( $post_id, '_avs_top_issue', $top_issue );
 				}
 
 				$pages_scanned++;

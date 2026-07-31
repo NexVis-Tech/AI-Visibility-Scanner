@@ -54,9 +54,12 @@ class Plugin {
 		if ( is_admin() ) {
 			$admin_menu   = new Admin_Menu();
 			$admin_assets = new Admin_Assets();
+			$post_list    = new \AIVisibilityScanner\Admin\Post_List_Table();
 
 			add_action( 'admin_menu', array( $admin_menu, 'register_menu' ) );
 			add_action( 'admin_enqueue_scripts', array( $admin_assets, 'enqueue_assets' ) );
+			add_action( 'enqueue_block_editor_assets', array( $admin_assets, 'enqueue_editor_assets' ) );
+			$post_list->init_hooks();
 		}
 
 		$rest_api = new Rest_API();

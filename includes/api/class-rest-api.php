@@ -142,6 +142,30 @@ class Rest_API extends WP_REST_Controller {
 				),
 			)
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/pages/(?P<post_id>[\d]+)/report',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_page_report' ),
+					'permission_callback' => array( $this, 'edit_post_permission_check' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/pages/(?P<post_id>[\d]+)/analyze',
+			array(
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'analyze_page' ),
+					'permission_callback' => array( $this, 'edit_post_permission_check' ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -417,5 +441,220 @@ class Rest_API extends WP_REST_Controller {
 		);
 
 		return new WP_REST_Response( $export_data, 200 );
+	}
+
+	/**
+	 * Permission check for individual post editing capabilities.
+	 */
+	public function edit_post_permission_check( WP_REST_Request $request ) {
+		$post_id = (int) $request['post_id'];
+		if ( ! $post_id ) {
+			return false;
+		}
+		return current_user_can( 'edit_post', $post_id );
+	}
+
+	/**
+	 * Endpoint: GET /avs/v1/pages/{post_id}/report
+	 */
+	public function get_page_report( WP_REST_Request $request ) {
+		$post_id = (int) $request['post_id'];
+		global $wpdb;
+
+		$score      = get_post_meta( $post_id, '_avs_score', true );
+		$scan_id    = get_post_meta( $post_id, '_avs_score_scan_id', true );
+		$updated_at = get_post_meta( $post_id, '_avs_score_updated_at', true );
+		$summary    = get_post_meta( $post_id, '_avs_issue_summary', true );
+		$top_issue  = get_post_meta( $post_id, '_avs_top_issue', true );
+
+		if ( '' === $score || false === $score || ! $updated_at ) {
+			return new WP_REST_Response( array( 'scanned' => false ), 200 );
+		}
+
+		$table_results = $wpdb->prefix . 'avs_check_results';
+
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT check_slug, category, result, evidence, fix_hint FROM {$table_results} WHERE post_id = %d AND scan_id = %d",
+				$post_id,
+				$scan_id
+			)
+		);
+
+		$per_page_check_slugs = array(
+			'schema_presence',
+			'schema_validity',
+			'heading_hierarchy',
+			'meta_description',
+			'faq_howto_opportunity',
+		);
+
+		$checklist = array();
+		foreach ( $results as $row ) {
+			if ( in_array( $row->check_slug, $per_page_check_slugs, true ) ) {
+				$checklist[] = array(
+					'slug'     => $row->check_slug,
+					'category' => $row->category,
+					'result'   => $row->result,
+					'evidence' => $row->evidence,
+					'fix_hint' => $row->fix_hint,
+				);
+			}
+		}
+
+		return new WP_REST_Response(
+			array(
+				'scanned'    => true,
+				'score'      => (int) $score,
+				'updated_at' => $updated_at,
+				'summary'    => json_decode( $summary, true ),
+				'top_issue'  => $top_issue,
+				'results'    => $checklist,
+			),
+			200
+		);
+	}
+
+	/**
+	 * Endpoint: POST /avs/v1/pages/{post_id}/analyze
+	 */
+	public function analyze_page( WP_REST_Request $request ) {
+		$post_id = (int) $request['post_id'];
+		global $wpdb;
+
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return new WP_Error( 'avs_post_not_found', __( 'Post not found.', 'ai-visibility-scanner' ), array( 'status' => 404 ) );
+		}
+
+		// Get latest scan ID to associate with the check results
+		$table_scans   = $wpdb->prefix . 'avs_scans';
+		$table_results = $wpdb->prefix . 'avs_check_results';
+
+		$scan_id = (int) $wpdb->get_var( "SELECT id FROM {$table_scans} ORDER BY id DESC LIMIT 1" );
+		if ( ! $scan_id ) {
+			$scan_id = 0;
+		}
+
+		$page_url = get_permalink( $post_id );
+
+		// Run per-page checks using Strategy 1 (in-process render)
+		$fetcher      = new \AIVisibilityScanner\Scanner\Page_Fetcher( $scan_id );
+		$html_body    = $fetcher->fetch_in_process( $page_url );
+
+		$registry     = new \AIVisibilityScanner\Scanner\Checks\Check_Registry();
+		$checks       = $registry->get_checks();
+		$crawler      = new \AIVisibilityScanner\Scanner\Crawler();
+		$site_context = $crawler->get_site_context();
+
+		$per_page_check_slugs = array(
+			'schema_presence',
+			'schema_validity',
+			'heading_hierarchy',
+			'meta_description',
+			'faq_howto_opportunity',
+		);
+
+		// Delete old results for these checks on this post/page under current scan ID
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$table_results} WHERE post_id = %d AND scan_id = %d AND check_slug IN ('schema_presence', 'schema_validity', 'heading_hierarchy', 'meta_description', 'faq_howto_opportunity')",
+				$post_id,
+				$scan_id
+			)
+		);
+
+		$checklist = array();
+
+		foreach ( $checks as $check ) {
+			if ( in_array( $check->get_slug(), $per_page_check_slugs, true ) ) {
+				$result_obj = $check->run( $page_url, $html_body, $site_context );
+
+				$wpdb->insert(
+					$table_results,
+					array(
+						'scan_id'      => $scan_id,
+						'post_id'      => $post_id,
+						'page_url'     => $page_url,
+						'check_slug'   => $result_obj->slug,
+						'category'     => $result_obj->category,
+						'result'       => $result_obj->result,
+						'evidence'     => $result_obj->evidence,
+						'fix_hint'     => $result_obj->fix_hint,
+						'effort_score' => $result_obj->effort_score,
+						'impact_score' => $result_obj->impact_score,
+					),
+					array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
+				);
+
+				$checklist[] = array(
+					'slug'     => $result_obj->slug,
+					'category' => $result_obj->category,
+					'result'   => $result_obj->result,
+					'evidence' => $result_obj->evidence,
+					'fix_hint' => $result_obj->fix_hint,
+				);
+			}
+		}
+
+		// Calculate page score and save postmeta
+		$scoring_engine  = new \AIVisibilityScanner\Scoring\Scoring_Engine();
+		$page_score_data = $scoring_engine->calculate_page_score( $scan_id, $post_id );
+
+		$page_results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT result, evidence, effort_score, impact_score FROM {$table_results} WHERE scan_id = %d AND post_id = %d",
+				$scan_id,
+				$post_id
+			)
+		);
+
+		$counts = array( 'fail' => 0, 'warn' => 0, 'pass' => 0 );
+		$unresolved = array();
+
+		foreach ( $page_results as $row ) {
+			$res = $row->result;
+			if ( isset( $counts[ $res ] ) ) {
+				$counts[ $res ]++;
+			}
+
+			if ( 'pass' !== $res ) {
+				$ratio = $row->effort_score > 0 ? ( $row->impact_score / $row->effort_score ) : $row->impact_score;
+				$unresolved[] = array(
+					'evidence' => $row->evidence,
+					'ratio'    => $ratio,
+				);
+			}
+		}
+
+		usort( $unresolved, function( $a, $b ) {
+			if ( $a['ratio'] === $b['ratio'] ) {
+				return 0;
+			}
+			return ( $a['ratio'] > $b['ratio'] ) ? -1 : 1;
+		} );
+
+		$top_issue = '';
+		if ( ! empty( $unresolved ) ) {
+			$top_issue = $unresolved[0]['evidence'];
+		}
+
+		update_post_meta( $post_id, '_avs_score', (int) $page_score_data['composite'] );
+		update_post_meta( $post_id, '_avs_score_scan_id', (int) $scan_id );
+		update_post_meta( $post_id, '_avs_score_updated_at', current_time( 'mysql' ) );
+		update_post_meta( $post_id, '_avs_issue_summary', wp_json_encode( $counts ) );
+		update_post_meta( $post_id, '_avs_top_issue', $top_issue );
+
+		return new WP_REST_Response(
+			array(
+				'success'    => true,
+				'score'      => (int) $page_score_data['composite'],
+				'updated_at' => current_time( 'mysql' ),
+				'summary'    => $counts,
+				'top_issue'  => $top_issue,
+				'results'    => $checklist,
+			),
+			200
+		);
 	}
 }
