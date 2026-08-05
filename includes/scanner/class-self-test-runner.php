@@ -133,8 +133,9 @@ class Self_Test_Runner {
 		$cf_ray  = isset( $headers['cf-ray'] ) ? $headers['cf-ray'] : null;
 		$cf_cache = isset( $headers['cf-cache-status'] ) ? $headers['cf-cache-status'] : null;
 		$server  = isset( $headers['server'] ) ? $headers['server'] : null;
+		$server_str = is_array( $server ) ? implode( ', ', $server ) : (string) $server;
 
-		$detected = ( null !== $cf_ray || null !== $cf_cache || ( $server && strpos( strtolower( $server ), 'cloudflare' ) !== false ) );
+		$detected = ( null !== $cf_ray || null !== $cf_cache || ( $server && strpos( strtolower( $server_str ), 'cloudflare' ) !== false ) );
 
 		return array(
 			'name'            => __( 'Cloudflare Intermediary Check', 'ai-visibility-scanner' ),

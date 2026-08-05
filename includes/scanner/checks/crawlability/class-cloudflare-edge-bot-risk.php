@@ -32,9 +32,10 @@ class Cloudflare_Edge_Bot_Risk implements Check_Interface {
 		$evidence    = array();
 
 		foreach ( $headers as $name => $value ) {
-			if ( strpos( strtolower( $name ), 'cf-ray' ) !== false || strpos( strtolower( $name ), 'cf-cache-status' ) !== false || strpos( strtolower( $value ), 'cloudflare' ) !== false ) {
+			$value_str = is_array( $value ) ? implode( ', ', $value ) : (string) $value;
+			if ( strpos( strtolower( $name ), 'cf-ray' ) !== false || strpos( strtolower( $name ), 'cf-cache-status' ) !== false || strpos( strtolower( $value_str ), 'cloudflare' ) !== false ) {
 				$cf_detected = true;
-				$evidence[]  = $name . ': ' . ( is_array( $value ) ? implode( ', ', $value ) : $value );
+				$evidence[]  = $name . ': ' . $value_str;
 			}
 		}
 
