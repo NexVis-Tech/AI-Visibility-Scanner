@@ -9,6 +9,7 @@ if ( isset( $_POST['avs_save_settings'] ) && check_admin_referer( 'avs_settings_
 	$exclude_urls  = isset( $_POST['avs_exclude_urls'] ) ? sanitize_textarea_field( $_POST['avs_exclude_urls'] ) : '';
 	$request_delay = isset( $_POST['avs_request_delay'] ) ? absint( $_POST['avs_request_delay'] ) : 500;
 	$enable_credit = isset( $_POST['avs_enable_credit_footer'] ) ? 1 : 0;
+	$is_local_biz  = isset( $_POST['avs_is_local_business'] ) ? 1 : 0;
 
 	// Enforce ceiling filter limit for free build
 	$free_cap  = apply_filters( 'avs_max_pages_free', 30 );
@@ -23,14 +24,28 @@ if ( isset( $_POST['avs_save_settings'] ) && check_admin_referer( 'avs_settings_
 	);
 
 	update_option( 'avs_settings', $settings );
+	update_option( 'avs_is_local_business', $is_local_biz );
+	update_option( 'avs_local_business_user_set', 1 );
+
 	echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved successfully.', 'ai-visibility-scanner' ) . '</p></div>';
 }
 
 $settings           = get_option( 'avs_settings', array( 'post_types' => array( 'post', 'page' ), 'max_pages' => 30, 'exclude_urls' => '', 'request_delay' => 500, 'enable_credit_footer' => 1 ) );
 $all_post_types     = get_post_types( array( 'public' => true ), 'objects' );
+$is_local_business  = (bool) get_option( 'avs_is_local_business', false );
+$auto_suggested     = (bool) get_option( 'avs_local_business_auto_suggested', false );
 ?>
 <div class="wrap avs-wrap">
 	<h1 class="avs-heading"><?php esc_html_e( 'AI Visibility Scanner — Settings', 'ai-visibility-scanner' ); ?></h1>
+
+	<?php if ( ! $is_local_business && $auto_suggested ) : ?>
+		<div class="notice notice-info is-dismissible" style="margin-top: 15px;">
+			<p>
+				<strong><?php esc_html_e( 'Local Business Signals Detected:', 'ai-visibility-scanner' ); ?></strong>
+				<?php esc_html_e( 'We detected a Local SEO plugin, Google Maps embed, or NAP details on your site. If this is a local business with a physical address, consider enabling the LocalBusiness Schema setting below.', 'ai-visibility-scanner' ); ?>
+			</p>
+		</div>
+	<?php endif; ?>
 
 	<form method="post" action="" class="avs-card" style="margin-top: 20px;">
 		<?php wp_nonce_field( 'avs_settings_nonce' ); ?>
@@ -46,6 +61,17 @@ $all_post_types     = get_post_types( array( 'public' => true ), 'objects' );
 						</label>
 					<?php endforeach; ?>
 					<p class="description"><?php esc_html_e( 'Select which public content types to include during sitemap and page scanning.', 'ai-visibility-scanner' ); ?></p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Local Business Schema Audit', 'ai-visibility-scanner' ); ?></th>
+				<td>
+					<label>
+						<input type="checkbox" name="avs_is_local_business" value="1" <?php checked( $is_local_business ); ?> />
+						<?php esc_html_e( 'Is this a local business with a physical address or service area?', 'ai-visibility-scanner' ); ?>
+					</label>
+					<p class="description"><?php esc_html_e( 'When enabled, the scanner will audit LocalBusiness NAP (Name, Address, Phone) and opening hours schema on your Homepage, Contact, and About pages.', 'ai-visibility-scanner' ); ?></p>
 				</td>
 			</tr>
 

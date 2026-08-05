@@ -21,6 +21,10 @@ class Robots_Ai_Bots implements Check_Interface {
 		return 'crawlability';
 	}
 
+	public function is_applicable( array $context ): bool {
+		return true;
+	}
+
 	public function run( string $page_url, string $html_body, array $context ): Check_Result {
 		$robots_txt = $context['robots_txt'] ?? '';
 

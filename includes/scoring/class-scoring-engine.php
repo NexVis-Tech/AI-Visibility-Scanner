@@ -32,6 +32,10 @@ class Scoring_Engine {
 		);
 
 		foreach ( $results as $row ) {
+			if ( 'skipped' === $row->result ) {
+				continue;
+			}
+
 			$cat = strtolower( $row->category );
 			if ( ! isset( $categories[ $cat ] ) ) {
 				$categories[ $cat ] = array( 'points' => 0, 'total' => 0 );
@@ -92,6 +96,10 @@ class Scoring_Engine {
 		);
 
 		foreach ( $results as $row ) {
+			if ( 'skipped' === $row->result ) {
+				continue;
+			}
+
 			$cat = strtolower( $row->category );
 			if ( ! isset( $categories[ $cat ] ) ) {
 				$categories[ $cat ] = array( 'points' => 0, 'total' => 0 );

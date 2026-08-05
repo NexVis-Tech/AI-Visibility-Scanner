@@ -10,7 +10,9 @@ use AIVisibilityScanner\Scanner\Page_Fetcher;
 use AIVisibilityScanner\Scanner\Scan_Job;
 use AIVisibilityScanner\Scanner\Environment_Collector;
 use AIVisibilityScanner\Scanner\Diagnostics_Logger;
+use AIVisibilityScanner\Scanner\Classifier;
 use AIVisibilityScanner\Scanner\Checks\Check_Registry;
+use AIVisibilityScanner\Scanner\Checks\Check_Result;
 use AIVisibilityScanner\Scoring\Scoring_Engine;
 
 /**
@@ -91,6 +93,10 @@ class Orchestrator {
 			$site_context = $crawler->get_site_context();
 			$urls         = $crawler->get_urls_to_scan();
 
+			$site_class                   = Classifier::classify_site();
+			$site_context['is_local_business']        = $site_class['is_local_business'];
+			$site_context['local_business_suggested'] = $site_class['local_business_suggested'];
+
 			$settings     = get_option( 'avs_settings', array() );
 			$delay_ms     = isset( $settings['request_delay'] ) ? (int) $settings['request_delay'] : 500;
 
@@ -99,11 +105,26 @@ class Orchestrator {
 			foreach ( $urls as $url ) {
 				// Optimize: Fetch page HTML once per URL instead of once per check!
 				$html_body = $fetcher->fetch_in_process( $url, 'page_fetch' );
-				$post_id = url_to_postid( $url );
-				$post_id = $post_id > 0 ? $post_id : null;
+				$post_id   = url_to_postid( $url );
+				$post_id   = $post_id > 0 ? $post_id : null;
+
+				$page_context               = $site_context;
+				$page_context['classifier'] = Classifier::classify_page( $url, $html_body, $site_context );
 
 				foreach ( $checks as $check ) {
-					$result_obj = $check->run( $url, $html_body, $site_context );
+					if ( method_exists( $check, 'is_applicable' ) && ! $check->is_applicable( $page_context ) ) {
+						$result_obj = new Check_Result(
+							$check->get_slug(),
+							$check->get_category(),
+							'skipped',
+							'Check skipped: Not applicable to this page or site context.',
+							'',
+							0,
+							0
+						);
+					} else {
+						$result_obj = $check->run( $url, $html_body, $page_context );
+					}
 
 					$wpdb->insert(
 						$table_results,

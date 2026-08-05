@@ -25,6 +25,14 @@ interface Check_Interface {
 	public function get_category(): string;
 
 	/**
+	 * Determine if this check is applicable to the given page or site context.
+	 *
+	 * @param array $context
+	 * @return bool
+	 */
+	public function is_applicable( array $context ): bool;
+
+	/**
 	 * Execute check logic on a single page or site context.
 	 *
 	 * @param string $page_url

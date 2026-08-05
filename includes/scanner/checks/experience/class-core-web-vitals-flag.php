@@ -21,6 +21,10 @@ class Core_Web_Vitals_Flag implements Check_Interface {
 		return 'experience';
 	}
 
+	public function is_applicable( array $context ): bool {
+		return true;
+	}
+
 	public function run( string $page_url, string $html_body, array $context ): Check_Result {
 		return new Check_Result(
 			$this->get_slug(),

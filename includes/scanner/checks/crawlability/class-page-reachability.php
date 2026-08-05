@@ -21,6 +21,10 @@ class Page_Reachability implements Check_Interface {
 		return 'crawlability';
 	}
 
+	public function is_applicable( array $context ): bool {
+		return true;
+	}
+
 	public function run( string $page_url, string $html_body, array $context ): Check_Result {
 		if ( empty( trim( $html_body ) ) ) {
 			return new Check_Result(

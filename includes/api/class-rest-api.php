@@ -484,6 +484,9 @@ class Rest_API extends WP_REST_Controller {
 		$per_page_check_slugs = array(
 			'schema_presence',
 			'schema_validity',
+			'schema_product_validity',
+			'schema_localbusiness_validity',
+			'schema_review_validity',
 			'heading_hierarchy',
 			'meta_description',
 			'faq_howto_opportunity',
@@ -547,20 +550,29 @@ class Rest_API extends WP_REST_Controller {
 		$crawler      = new \AIVisibilityScanner\Scanner\Crawler();
 		$site_context = $crawler->get_site_context();
 
+		$site_class                   = \AIVisibilityScanner\Scanner\Classifier::classify_site();
+		$site_context['is_local_business']        = $site_class['is_local_business'];
+		$site_context['local_business_suggested'] = $site_class['local_business_suggested'];
+		$page_context               = $site_context;
+		$page_context['classifier'] = \AIVisibilityScanner\Scanner\Classifier::classify_page( $page_url, $html_body, $site_context );
+
 		$per_page_check_slugs = array(
 			'schema_presence',
 			'schema_validity',
+			'schema_product_validity',
+			'schema_localbusiness_validity',
+			'schema_review_validity',
 			'heading_hierarchy',
 			'meta_description',
 			'faq_howto_opportunity',
 		);
 
 		// Delete old results for these checks on this post/page under current scan ID
+		$placeholders = implode( ',', array_fill( 0, count( $per_page_check_slugs ), '%s' ) );
 		$wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM {$table_results} WHERE post_id = %d AND scan_id = %d AND check_slug IN ('schema_presence', 'schema_validity', 'heading_hierarchy', 'meta_description', 'faq_howto_opportunity')",
-				$post_id,
-				$scan_id
+				"DELETE FROM {$table_results} WHERE post_id = %d AND scan_id = %d AND check_slug IN ({$placeholders})",
+				array_merge( array( $post_id, $scan_id ), $per_page_check_slugs )
 			)
 		);
 
@@ -568,7 +580,19 @@ class Rest_API extends WP_REST_Controller {
 
 		foreach ( $checks as $check ) {
 			if ( in_array( $check->get_slug(), $per_page_check_slugs, true ) ) {
-				$result_obj = $check->run( $page_url, $html_body, $site_context );
+				if ( method_exists( $check, 'is_applicable' ) && ! $check->is_applicable( $page_context ) ) {
+					$result_obj = new \AIVisibilityScanner\Scanner\Checks\Check_Result(
+						$check->get_slug(),
+						$check->get_category(),
+						'skipped',
+						'Check skipped: Not applicable to this page or site context.',
+						'',
+						0,
+						0
+					);
+				} else {
+					$result_obj = $check->run( $page_url, $html_body, $page_context );
+				}
 
 				$wpdb->insert(
 					$table_results,

@@ -21,6 +21,10 @@ class Meta_Description implements Check_Interface {
 		return 'content';
 	}
 
+	public function is_applicable( array $context ): bool {
+		return true;
+	}
+
 	public function run( string $page_url, string $html_body, array $context ): Check_Result {
 		if ( empty( $html_body ) ) {
 			return new Check_Result( $this->get_slug(), $this->get_category(), 'warn', 'HTML body unavailable.' );

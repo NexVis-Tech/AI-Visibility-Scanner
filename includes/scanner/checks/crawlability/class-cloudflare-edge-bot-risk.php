@@ -21,6 +21,10 @@ class Cloudflare_Edge_Bot_Risk implements Check_Interface {
 		return 'crawlability';
 	}
 
+	public function is_applicable( array $context ): bool {
+		return true;
+	}
+
 	public function run( string $page_url, string $html_body, array $context ): Check_Result {
 		$headers = $context['http_headers'] ?? array();
 

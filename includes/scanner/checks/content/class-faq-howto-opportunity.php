@@ -21,6 +21,10 @@ class Faq_Howto_Opportunity implements Check_Interface {
 		return 'content';
 	}
 
+	public function is_applicable( array $context ): bool {
+		return true;
+	}
+
 	public function run( string $page_url, string $html_body, array $context ): Check_Result {
 		if ( empty( $html_body ) ) {
 			return new Check_Result( $this->get_slug(), $this->get_category(), 'warn', 'HTML body unavailable.' );
@@ -40,7 +44,7 @@ class Faq_Howto_Opportunity implements Check_Interface {
 				$this->get_category(),
 				'warn',
 				sprintf( 'Detected %d question/how-to heading pattern(s) without corresponding FAQPage/HowTo schema.', $opportunity_count ),
-				'Wrap Q&A sections with FAQPage schema markup to enhance direct answer extraction in AI search snippets.',
+				'Wrap Q&A and how-to sections with FAQPage/HowTo schema markup to support AI search engines (like Google AI Overviews and SearchGPT) in accurately parsing, comprehending, and citing your content.',
 				2,
 				4
 			);

@@ -42,11 +42,12 @@ class Report_Builder {
 		);
 
 		// Prioritized Fixes: Filter fail/warn and sort by impact / effort DESC
-		$fixes        = array();
-		$total_pass   = 0;
-		$total_warn   = 0;
-		$total_fail   = 0;
-		$pages_map    = array();
+		$fixes         = array();
+		$total_pass    = 0;
+		$total_warn    = 0;
+		$total_fail    = 0;
+		$total_skipped = 0;
+		$pages_map     = array();
 
 		foreach ( $results as $row ) {
 			if ( 'pass' === $row->result ) {
@@ -55,9 +56,11 @@ class Report_Builder {
 				$total_warn++;
 			} elseif ( 'fail' === $row->result ) {
 				$total_fail++;
+			} elseif ( 'skipped' === $row->result ) {
+				$total_skipped++;
 			}
 
-			if ( 'pass' !== $row->result ) {
+			if ( in_array( $row->result, array( 'warn', 'fail' ), true ) ) {
 				$row->ratio = $row->effort_score > 0 ? ( $row->impact_score / $row->effort_score ) : $row->impact_score;
 				$fixes[]    = $row;
 			}
@@ -66,11 +69,12 @@ class Report_Builder {
 			$url = $row->page_url ? $row->page_url : __( 'Global / Site-wide', 'ai-visibility-scanner' );
 			if ( ! isset( $pages_map[ $url ] ) ) {
 				$pages_map[ $url ] = array(
-					'url'        => $url,
-					'pass_count' => 0,
-					'warn_count' => 0,
-					'fail_count' => 0,
-					'results'    => array(),
+					'url'           => $url,
+					'pass_count'    => 0,
+					'warn_count'    => 0,
+					'fail_count'    => 0,
+					'skipped_count' => 0,
+					'results'       => array(),
 				);
 			}
 			$pages_map[ $url ]['results'][] = $row;
@@ -80,6 +84,8 @@ class Report_Builder {
 				$pages_map[ $url ]['warn_count']++;
 			} elseif ( 'fail' === $row->result ) {
 				$pages_map[ $url ]['fail_count']++;
+			} elseif ( 'skipped' === $row->result ) {
+				$pages_map[ $url ]['skipped_count']++;
 			}
 		}
 
@@ -90,11 +96,11 @@ class Report_Builder {
 			return ( $a->ratio > $b->ratio ) ? -1 : 1;
 		} );
 
-		// Calculate per-page scores
+		// Calculate per-page scores excluding skipped checks
 		foreach ( $pages_map as $url => &$pdata ) {
-			$p_total = count( $pdata['results'] );
-			if ( $p_total > 0 ) {
-				$p_score = (int) round( ( ( $pdata['pass_count'] * 100 ) + ( $pdata['warn_count'] * 50 ) ) / $p_total );
+			$p_applicable = $pdata['pass_count'] + $pdata['warn_count'] + $pdata['fail_count'];
+			if ( $p_applicable > 0 ) {
+				$p_score = (int) round( ( ( $pdata['pass_count'] * 100 ) + ( $pdata['warn_count'] * 50 ) ) / $p_applicable );
 				$pdata['score'] = min( 100, max( 0, $p_score ) );
 			} else {
 				$pdata['score'] = 100;
@@ -120,6 +126,7 @@ class Report_Builder {
 				'pass'         => $total_pass,
 				'warn'         => $total_warn,
 				'fail'         => $total_fail,
+				'skipped'      => $total_skipped,
 			),
 			'started_at'       => $scan->started_at,
 			'completed_at'     => $scan->completed_at,

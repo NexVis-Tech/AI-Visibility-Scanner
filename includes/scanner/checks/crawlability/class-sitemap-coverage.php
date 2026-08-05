@@ -21,6 +21,10 @@ class Sitemap_Coverage implements Check_Interface {
 		return 'crawlability';
 	}
 
+	public function is_applicable( array $context ): bool {
+		return true;
+	}
+
 	public function run( string $page_url, string $html_body, array $context ): Check_Result {
 		$sitemap_found = $context['sitemap_found'] ?? false;
 		$sitemap_count = $context['sitemap_urls_count'] ?? 0;
